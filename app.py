@@ -1,4 +1,4 @@
- import streamlit as st
+import streamlit as st
 import openai
 from deep_translator import GoogleTranslator
 from langdetect import detect
