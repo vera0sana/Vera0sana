@@ -1,86 +1,53 @@
-# AI Receptionist for Mental Health – Streamlit App with Voice Input
-
-import streamlit as st
+ import streamlit as st
 import openai
+from deep_translator import GoogleTranslator
+from langdetect import detect
 from textblob import TextBlob
-import speech_recognition as sr
-import tempfile
-import os
 
-# Load OpenAI API key from Streamlit secrets
+# Load API key from secrets
 openai.api_key = st.secrets["OPENAI_API_KEY"]
 
-st.set_page_config(page_title="AI Emotional Receptionist", layout="centered")
-st.title("🧠 AI Emotional Receptionist")
-st.markdown("""
-This is a safe space. You don't need to log in. Just speak or write.
-If it seems like you could benefit from speaking with a real therapist, please do.
-""")
+# App Title and Description
+st.set_page_config(page_title="Cognita", layout="centered")
+st.markdown("<h1 style='text-align: center;'>🧠 Cognita: Your Emotional Receptionist</h1>", unsafe_allow_html=True)
+st.markdown("Welcome to a safe space. Express your thoughts in any language. Cognita will understand and respond with empathy.")
 
-# Text input
-user_input = st.text_area("What's on your mind?", height=200)
+# Input from user
+user_input = st.text_area("💬 What's on your mind?", height=200, placeholder="Type how you're feeling...")
 
-st.markdown("---")
-st.subheader("🎤 Or Speak Your Thoughts")
+# Language options
+languages = GoogleTranslator.get_supported_languages(as_dict=True)
+lang_choices = list(languages.keys())
+target_lang = st.selectbox("🌐 Respond to me in:", lang_choices, index=lang_choices.index("english"))
 
-# File uploader for voice
-uploaded_file = st.file_uploader("Upload a short voice message (WAV only)", type=["wav"])
-
-if uploaded_file is not None:
-    recognizer = sr.Recognizer()
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp_file:
-        tmp_file.write(uploaded_file.read())
-        tmp_path = tmp_file.name
-    with sr.AudioFile(tmp_path) as source:
-        audio = recognizer.record(source)
+# Translate user input to English for processing
+if st.button("Send to Cognita"):
+    if user_input.strip():
         try:
-            voice_text = recognizer.recognize_google(audio)
-            st.success("Voice transcription: " + voice_text)
-            user_input = voice_text
-        except sr.UnknownValueError:
-            st.error("Could not understand the audio.")
-        except sr.RequestError as e:
-            st.error(f"Could not request results; {e}")
+            detected_lang = detect(user_input)
+            translated_input = GoogleTranslator(source='auto', target='english').translate(user_input)
 
-# Process input text
-if user_input:
-    st.markdown("### 📝 Sentiment Analysis")
-    sentiment = TextBlob(user_input).sentiment
-    st.write(f"Polarity: `{sentiment.polarity}` — Subjectivity: `{sentiment.subjectivity}`")
+            # Call OpenAI for empathetic response
+            prompt = (
+                f"You are an empathetic AI therapist. A user said: \"{translated_input}\" "
+                "Respond with warmth and comfort."
+            )
+            response = openai.ChatCompletion.create(
+                model="gpt-3.5-turbo",
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.7
+            )
 
-    st.markdown("### 💬 AI Reflection")
-    prompt = f"User said: '{user_input}'. How might an empathetic assistant respond?"
-    response = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo",
-        messages=[{"role": "user", "content": prompt}],
-        temperature=0.7
-    )
-    st.info(response.choices[0].message.content)
-from langdetect import detect
-from googletrans import Translator
+            english_reply = response.choices[0].message["content"].strip()
 
-translator = Translator()
+            # Translate response back to target language
+            translated_reply = GoogleTranslator(source='english', target=target_lang).translate(english_reply)
 
-# Detect user language
-user_lang = detect(user_input)
+            # Display output
+            st.markdown("### 🧠 Cognita says:")
+            st.success(translated_reply)
 
-# Translate to English if needed
-if user_lang != 'en':
-    translated_input = translator.translate(user_input, dest='en').text
-else:
-    translated_input = user_input
-
-# Send to OpenAI
-response = openai.ChatCompletion.create(
-    model="gpt-3.5-turbo",
-    messages=[
-        {"role": "user", "content": translated_input}
-    ]
-)
-
-# Translate back if needed
-reply = response['choices'][0]['message']['content']
-if user_lang != 'en':
-    reply = translator.translate(reply, dest=user_lang).text
-
-st.markdown(f"**Cognita says:** {reply}")
+        except Exception as e:
+            st.error(f"Oops! Something went wrong: {e}")
+    else:
+        st.warning("Please share something with me so I can help.")
