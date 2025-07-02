@@ -1,40 +1,39 @@
 import streamlit as st
 import openai
-from googletrans import Translator
+from deep_translator import GoogleTranslator
 from gtts import gTTS
 from io import BytesIO
-import base64
 
-# 🌐 API key
+# 🔐 API key
 openai.api_key = st.secrets["OPENAI_API_KEY"]
 
-# 🎨 Page setup
-st.set_page_config(page_title="Cognira: Emotional Receptionist", page_icon="🧠", layout="centered")
-
 # 🧠 Title
+st.set_page_config(page_title="Cognira: Emotional Receptionist", page_icon="🧠", layout="centered")
 st.markdown("## 🧠 Cognira: AI Emotional Receptionist")
-st.write("Share your feelings in any language. Cognira will understand and respond with empathy.")
+st.write("Share your feelings in any language. Cognira will understand and gently respond in English with empathy.")
 
-# 🌍 Translator
-translator = Translator()
-
+# 🌐 Translate input
 def translate_to_english(text):
-    result = translator.translate(text, dest='en')
-    return result.text
+    try:
+        return GoogleTranslator(source='auto', target='en').translate(text)
+    except:
+        return "Translation failed."
 
+# 💬 Generate AI reply
 def generate_response(prompt):
     try:
         response = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",
             messages=[
-                {"role": "system", "content": "You are an empathetic emotional receptionist. Respond with warmth and care."},
+                {"role": "system", "content": "You are an empathetic AI assistant. Respond kindly."},
                 {"role": "user", "content": prompt}
             ]
         )
         return response['choices'][0]['message']['content']
     except Exception as e:
-        return f"Error: {e}"
+        return f"Error: {str(e)}"
 
+# 🔊 Convert text to speech
 def speak_text(text):
     tts = gTTS(text)
     mp3_fp = BytesIO()
@@ -42,30 +41,23 @@ def speak_text(text):
     mp3_fp.seek(0)
     return mp3_fp
 
-# ✏️ Text Input Box
+# 🧾 Input Box
 user_input = st.text_input("💬 What's on your mind?", placeholder="Write here...")
 
-# ✅ Submit Button
+# 🔘 Submit Button
 if st.button("🧠 Submit"):
     if user_input:
-        with st.spinner("Cognira is listening..."):
-            # 1. Translate
-            english_text = translate_to_english(user_input)
-            st.markdown(f"**🔄 Translated to English:** *{english_text}*")
-            
-            # 2. AI Response
-            reply = generate_response(english_text)
-            st.success("🧠 Cognira says:")
-            st.markdown(f"> {reply}")
-            
-            # 3. Text-to-Speech
-            mp3_fp = speak_text(reply)
-            st.audio(mp3_fp, format="audio/mp3")
+        with st.spinner("Thinking..."):
+            translated = translate_to_english(user_input)
+            st.markdown(f"**Translated to English:** _{translated}_")
+            reply = generate_response(translated)
+            st.markdown(f"**Cognira says:** {reply}")
+            st.audio(speak_text(reply), format='audio/mp3')
 
-# 🎙 Optional Voice Input Upload
+# 🎙️ Optional Voice Upload (future feature)
 st.markdown("---")
-st.markdown("🎤 **Or upload a voice message (WAV only)**")
-voice_file = st.file_uploader("Upload your voice file", type=["wav"])
-if voice_file:
-    st.audio(voice_file)
-    st.info("🗣️ Voice-to-text is not yet enabled – coming soon!")
+st.markdown("🎤 Upload voice (optional, WAV only)")
+voice = st.file_uploader("Upload voice input", type=["wav"])
+if voice:
+    st.audio(voice)
+    st.warning("Voice-to-text feature coming soon.")
