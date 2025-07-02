@@ -56,3 +56,31 @@ if user_input:
         temperature=0.7
     )
     st.info(response.choices[0].message.content)
+from langdetect import detect
+from googletrans import Translator
+
+translator = Translator()
+
+# Detect user language
+user_lang = detect(user_input)
+
+# Translate to English if needed
+if user_lang != 'en':
+    translated_input = translator.translate(user_input, dest='en').text
+else:
+    translated_input = user_input
+
+# Send to OpenAI
+response = openai.ChatCompletion.create(
+    model="gpt-3.5-turbo",
+    messages=[
+        {"role": "user", "content": translated_input}
+    ]
+)
+
+# Translate back if needed
+reply = response['choices'][0]['message']['content']
+if user_lang != 'en':
+    reply = translator.translate(reply, dest=user_lang).text
+
+st.markdown(f"**Cognita says:** {reply}")
