@@ -1,10 +1,6 @@
-streamlit>=1.32.0
-openai>=1.0.0
-requests>=2.25.0
-python-dotenv
+streamlit
+openai
+googletrans==4.0.0rc1
+langdetect
 textblob
 speechrecognition
-python-dotenv
-googletrans==4.0.0-rc1
-langdetect
-
