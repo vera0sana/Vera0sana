@@ -1,6 +1,10 @@
 streamlit
 openai
 deep-translator
+gTTS
 langdetect
+emoji
+transformers
+torch
 textblob
-speechrecognition
+SpeechRecognition
